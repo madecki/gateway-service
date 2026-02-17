@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  gateway-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - TRUST_PROXY=false
+      - REQUEST_BODY_LIMIT_BYTES=1048576
+      - UPSTREAM_TIMEOUT_MS=30000
+      - RATE_LIMIT_MAX=100
+      - RATE_LIMIT_WINDOW_SECONDS=60
+      - AUTH_RATE_LIMIT_MAX=5
+      - AUTH_RATE_LIMIT_WINDOW_SECONDS=60
+      - LOG_LEVEL=info
+      # Upstream service URLs - uncomment and configure as needed
+      # - AUTH_UPSTREAM_URL=http://auth-service:4000
+      # - DIARY_UPSTREAM_URL=http://diary-service:4100
+      # - TASKS_UPSTREAM_URL=http://tasks-service:4200
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - omni-network
+
+  # Example upstream service configuration (uncomment to use)
+  # auth-service:
+  #   image: your-auth-service-image:latest
+  #   ports:
+  #     - "4000:4000"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - PORT=4000
+  #   networks:
+  #     - omni-network
+
+  # diary-service:
+  #   image: your-diary-service-image:latest
+  #   ports:
+  #     - "4100:4100"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - PORT=4100
+  #   networks:
+  #     - omni-network
+
+  # tasks-service:
+  #   image: your-tasks-service-image:latest
+  #   ports:
+  #     - "4200:4200"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - PORT=4200
+  #   networks:
+  #     - omni-network
+
+networks:
+  omni-network:
+    driver: bridge
