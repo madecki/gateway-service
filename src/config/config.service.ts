@@ -64,43 +64,43 @@ export class AppConfigService {
     return this.configService.get('LOG_LEVEL');
   }
 
+  get authUpstreamUrl(): string {
+    const url = this.configService.get('AUTH_UPSTREAM_URL');
+    if (!url) throw new Error('AUTH_UPSTREAM_URL is required');
+    return url;
+  }
+
+  get authJwksUrl(): string {
+    const explicit = this.configService.get('AUTH_JWKS_URL');
+    if (explicit) return explicit;
+    return `${this.authUpstreamUrl}/.well-known/jwks.json`;
+  }
+
+  get diaryServiceToken(): string {
+    return this.configService.get('DIARY_SERVICE_TOKEN');
+  }
+
+  get shellUpstreamUrl(): string {
+    return this.configService.get('SHELL_UPSTREAM_URL');
+  }
+
+  get diaryAppUpstreamUrl(): string {
+    return this.configService.get('DIARY_APP_UPSTREAM_URL');
+  }
+
+  /** API upstreams for the generic proxy (auth is handled by AuthCookieProvider). */
   get upstreamConfigs(): UpstreamConfig[] {
     const configs: UpstreamConfig[] = [];
 
-    const authUrl = this.configService.get('AUTH_UPSTREAM_URL');
-    if (authUrl) {
-      configs.push({
-        prefix: '/auth',
-        upstream: authUrl,
-        rewritePrefix: '/auth',
-      });
-    }
-
     const diaryUrl = this.configService.get('DIARY_UPSTREAM_URL');
     if (diaryUrl) {
-      configs.push({
-        prefix: '/diary',
-        upstream: diaryUrl,
-        rewritePrefix: '/diary',
-      });
+      // /diary/entries → /entries at diary-api
+      configs.push({ prefix: '/diary', upstream: diaryUrl, rewritePrefix: '' });
     }
 
     const tasksUrl = this.configService.get('TASKS_UPSTREAM_URL');
     if (tasksUrl) {
-      configs.push({
-        prefix: '/tasks',
-        upstream: tasksUrl,
-        rewritePrefix: '/tasks',
-      });
-    }
-
-    const healthUpstreamUrl = this.configService.get('HEALTH_UPSTREAM_URL');
-    if (healthUpstreamUrl) {
-      configs.push({
-        prefix: '/upstream-health',
-        upstream: healthUpstreamUrl,
-        rewritePrefix: '/health',
-      });
+      configs.push({ prefix: '/tasks', upstream: tasksUrl, rewritePrefix: '' });
     }
 
     return configs;

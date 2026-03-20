@@ -29,6 +29,8 @@ async function bootstrap(): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (fastify as any).register(require('@fastify/cookie'));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (fastify as any).register(correlationIdPlugin);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (fastify as any).register(headerNormalizationPlugin, {
