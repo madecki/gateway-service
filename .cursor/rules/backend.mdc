@@ -1,0 +1,21 @@
+---
+description: NestJS backend conventions — layering and testing
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Backend standards (NestJS)
+
+## Layering
+
+- **Module / controller / service / repository** structure: keep boundaries clear.
+- **Controllers:** HTTP only (routing, DTO validation, status codes). No business logic.
+- **Services:** Business logic only. No direct Prisma/ORM or raw DB calls.
+- **Repositories:** All database access. No business rules beyond persistence shape.
+
+## Testing
+
+- Unit tests for service methods.
+- Integration tests for controller endpoints (request/response contracts).
+- Mirror test file layout to source (e.g. `foo.service.spec.ts` next to `foo.service.ts`).
+- Do not hit real external services in tests — mock DB adapters and outbound HTTP clients.

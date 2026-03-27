@@ -1,0 +1,41 @@
+---
+description: gateway — OmniRadon API gateway and reverse proxy
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# gateway
+
+Single HTTP entry for the browser: routing, JWT validation (JWKS), upstream proxying.
+
+## Stack
+
+- **Framework:** NestJS 10, Fastify 4
+- **Proxy / HTTP:** `undici` (or configured client), upstream URL env vars
+- **Auth:** JWT verification via JWKS (`jsonwebtoken` / jose as configured)
+- **Other:** WebSocket proxying, cookies, rate limiting, security headers (as implemented)
+- **Persistence:** None — no ORM or app database
+- **Tests:** Jest, Supertest (`test/`, e2e)
+
+## Port
+
+- Default **HTTP port:** `3000` (see `src/config` env validation).
+
+## Layout (`src/`)
+
+- `gateway/` — proxy handlers, route registration, upstream orchestration
+- `config/` — env validation and configuration
+- `common/` — shared plugins, middleware, guards, utilities
+
+## Layering note (no database)
+
+There is **no repository layer** — services encapsulate proxy logic, header/cookie handling, and JWT checks. Keep controllers thin; avoid duplicating routing rules across files.
+
+## Upstreams
+
+Upstream base URLs come from environment (shell, MFE apps, auth-service, diary/settings/task APIs). Prefer centralized config; document new routes when adding apps.
+
+## Related repos
+
+- **shell**, **diary-web**, **settings-web**, **task-manager-web** — browser-facing apps behind this gateway.
+- **auth-service** — `/auth/*` and JWKS source for validation.

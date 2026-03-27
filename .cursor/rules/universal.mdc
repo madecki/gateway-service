@@ -1,0 +1,38 @@
+---
+description: Universal coding standards — git, TypeScript quality, testing, accessibility
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Universal standards
+
+Apply in every repository. Complements stack-specific rules in `frontend.mdc` / `backend.mdc` and repo-specific rules.
+
+## Git workflow
+
+- Before starting work, check for uncommitted changes; if any exist, commit them first using Conventional Commits.
+- Commit completed work at the end of a task.
+- **Conventional Commits:** `type(scope): description` — types: `feat`, `fix`, `refactor`, `chore`, `test`, `docs`, `style`.
+- Commit messages: English, imperative mood, no trailing period.
+
+## Code quality
+
+- **TypeScript:** Never use `any`. Use explicit types or `unknown` with narrowing.
+- Do not use deprecated APIs or library features; verify in docs when unsure.
+- Keep files small and focused; if a file grows past ~200 lines, consider splitting.
+- Start every file with a brief top-of-file comment describing its purpose.
+- Non-obvious logic needs inline comments explaining **why**, not what the code literally does.
+
+## Testing
+
+- Every feature must include tests.
+- When changing or removing behavior, update or remove the corresponding tests.
+- All tests must pass before committing.
+
+## Accessibility (UI work)
+
+- Interactive elements need proper ARIA labels or roles.
+- Images need meaningful `alt` text.
+- Keyboard navigation must work for all interactive components.
+- Color contrast meets **WCAG AA**.
+- Prefer semantic HTML (`button`, `nav`, `main`, `section`, …); never use a `div` as a clickable control.
