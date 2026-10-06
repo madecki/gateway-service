@@ -12,6 +12,8 @@ import { CORRELATION_ID_HEADER, HOP_BY_HOP_HEADERS } from '../common/constants';
 /** HMR WebSocket path used by Next.js / Turbopack in dev. */
 const HMR_PATH = '/_next/webpack-hmr';
 const HMR_PATH_DIARY = '/mfe/diary/_next/webpack-hmr';
+const HMR_PATH_SETTINGS = '/mfe/settings/_next/webpack-hmr';
+const HMR_PATH_TASKS = '/mfe/tasks/_next/webpack-hmr';
 
 /**
  * Proxies the shell and diary-web Next.js applications through the gateway
@@ -57,6 +59,26 @@ export class FrontendProvider implements OnModuleInit {
     fastify.get('/mfe/diary/', diaryHandler);
     fastify.all('/mfe/diary/*', diaryHandler);
     this.logger.log(`Frontend proxy: /mfe/diary, /mfe/diary/, /mfe/diary/* -> ${diaryApp}`);
+
+    // ── Settings MFE iframe content (/mfe/settings, ...) ────────────────
+    const settingsApp = this.config.settingsAppUpstreamUrl;
+    const settingsHandler = async (request: FastifyRequest, reply: FastifyReply) =>
+      this.forward(request, reply, settingsApp, timeout);
+
+    fastify.get('/mfe/settings', settingsHandler);
+    fastify.get('/mfe/settings/', settingsHandler);
+    fastify.all('/mfe/settings/*', settingsHandler);
+    this.logger.log(`Frontend proxy: /mfe/settings, /mfe/settings/, /mfe/settings/* -> ${settingsApp}`);
+
+    // ── Task Manager MFE (/mfe/tasks, ...) ───────────────────────────────
+    const tasksApp = this.config.tasksAppUpstreamUrl;
+    const tasksHandler = async (request: FastifyRequest, reply: FastifyReply) =>
+      this.forward(request, reply, tasksApp, timeout);
+
+    fastify.get('/mfe/tasks', tasksHandler);
+    fastify.get('/mfe/tasks/', tasksHandler);
+    fastify.all('/mfe/tasks/*', tasksHandler);
+    this.logger.log(`Frontend proxy: /mfe/tasks, /mfe/tasks/, /mfe/tasks/* -> ${tasksApp}`);
 
     // ── Shell catch-all (/*) ──────────────────────────────────────
     // Must be registered after all more-specific routes so the Fastify radix
@@ -110,7 +132,12 @@ export class FrontendProvider implements OnModuleInit {
       }
       reply.status(response.statusCode);
       return reply.send(response.body);
-    } catch {
+    } catch (err) {
+      // 502 here is almost always ECONNREFUSED / ETIMEDOUT — MFE dev servers not running or wrong URL.
+      this.logger.warn(
+        { err, upstream: upstreamUrl.toString(), path: request.url },
+        'Frontend upstream unreachable (check DIARY_APP_UPSTREAM_URL / SETTINGS_APP_UPSTREAM_URL / TASKS_APP_UPSTREAM_URL and that Next is listening)',
+      );
       return reply.status(502).send({ error: { code: 'UPSTREAM_ERROR', message: 'Frontend unavailable' } });
     }
   }
@@ -124,6 +151,8 @@ export class FrontendProvider implements OnModuleInit {
 
     const shellBase = this.config.shellUpstreamUrl;
     const diaryBase = this.config.diaryAppUpstreamUrl;
+    const settingsBase = this.config.settingsAppUpstreamUrl;
+    const tasksBase = this.config.tasksAppUpstreamUrl;
     const wss = new ws.Server({ noServer: true });
 
     server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
@@ -131,10 +160,20 @@ export class FrontendProvider implements OnModuleInit {
       const isShellHmr = pathname === HMR_PATH || pathname.startsWith(`${HMR_PATH}/`);
       const isDiaryHmr =
         pathname === HMR_PATH_DIARY || pathname.startsWith(`${HMR_PATH_DIARY}/`);
+      const isSettingsHmr =
+        pathname === HMR_PATH_SETTINGS || pathname.startsWith(`${HMR_PATH_SETTINGS}/`);
+      const isTasksHmr =
+        pathname === HMR_PATH_TASKS || pathname.startsWith(`${HMR_PATH_TASKS}/`);
 
-      if (!isShellHmr && !isDiaryHmr) return;
+      if (!isShellHmr && !isDiaryHmr && !isSettingsHmr && !isTasksHmr) return;
 
-      const upstreamBase = isDiaryHmr ? diaryBase : shellBase;
+      const upstreamBase = isDiaryHmr
+        ? diaryBase
+        : isSettingsHmr
+          ? settingsBase
+          : isTasksHmr
+            ? tasksBase
+            : shellBase;
       const wsUrl = upstreamBase.replace(/^http/, 'ws') + (request.url ?? '');
 
       wss.handleUpgrade(request, socket, head, (clientWs) => {
@@ -162,7 +201,7 @@ export class FrontendProvider implements OnModuleInit {
     });
 
     this.logger.log(
-      `HMR WebSocket proxy: ${HMR_PATH}* -> ${shellBase}, ${HMR_PATH_DIARY}* -> ${diaryBase}`,
+      `HMR WebSocket proxy: ${HMR_PATH}* -> ${shellBase}, ${HMR_PATH_DIARY}* -> ${diaryBase}, ${HMR_PATH_SETTINGS}* -> ${settingsBase}, ${HMR_PATH_TASKS}* -> ${tasksBase}`,
     );
   }
 }

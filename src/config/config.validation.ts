@@ -15,11 +15,14 @@ export const envSchema = z.object({
   // Upstream API URLs
   AUTH_UPSTREAM_URL: z.string().url().optional(),
   DIARY_UPSTREAM_URL: z.string().url().optional(),
+  SETTINGS_UPSTREAM_URL: z.string().url().optional(),
   TASKS_UPSTREAM_URL: z.string().url().optional(),
 
   // Frontend upstream URLs (Next.js dev servers)
   SHELL_UPSTREAM_URL: z.string().url().default('http://localhost:3001'),
   DIARY_APP_UPSTREAM_URL: z.string().url().default('http://localhost:4280'),
+  SETTINGS_APP_UPSTREAM_URL: z.string().url().default('http://localhost:4380'),
+  TASKS_APP_UPSTREAM_URL: z.string().url().default('http://localhost:4480'),
 
   // Upstream timeout
   UPSTREAM_TIMEOUT_MS: z.coerce.number().default(30000),
@@ -41,6 +44,13 @@ export const envSchema = z.object({
   // Shared secret between gateway and diary-api — REQUIRED for service-to-service trust.
   // Set the same value in both DIARY_SERVICE_TOKEN (gateway) and GATEWAY_SERVICE_TOKEN (diary-api).
   DIARY_SERVICE_TOKEN: z.string().min(32, 'DIARY_SERVICE_TOKEN must be at least 32 characters'),
+
+  // Shared secret between gateway and settings-api — REQUIRED when SETTINGS_UPSTREAM_URL is set.
+  // Set the same value in both SETTINGS_SERVICE_TOKEN (gateway) and GATEWAY_SERVICE_TOKEN (settings-api).
+  SETTINGS_SERVICE_TOKEN: z.string().min(32, 'SETTINGS_SERVICE_TOKEN must be at least 32 characters'),
+
+  // Shared secret between gateway and task-manager-api — REQUIRED when TASKS_UPSTREAM_URL is set.
+  TASKS_SERVICE_TOKEN: z.string().min(32, 'TASKS_SERVICE_TOKEN must be at least 32 characters'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

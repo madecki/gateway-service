@@ -80,12 +80,28 @@ export class AppConfigService {
     return this.configService.get('DIARY_SERVICE_TOKEN');
   }
 
+  get settingsServiceToken(): string {
+    return this.configService.get('SETTINGS_SERVICE_TOKEN');
+  }
+
   get shellUpstreamUrl(): string {
     return this.configService.get('SHELL_UPSTREAM_URL');
   }
 
   get diaryAppUpstreamUrl(): string {
     return this.configService.get('DIARY_APP_UPSTREAM_URL');
+  }
+
+  get settingsAppUpstreamUrl(): string {
+    return this.configService.get('SETTINGS_APP_UPSTREAM_URL');
+  }
+
+  get tasksAppUpstreamUrl(): string {
+    return this.configService.get('TASKS_APP_UPSTREAM_URL');
+  }
+
+  get tasksServiceToken(): string {
+    return this.configService.get('TASKS_SERVICE_TOKEN');
   }
 
   /** API upstreams for the generic proxy (auth is handled by AuthCookieProvider). */
@@ -96,6 +112,11 @@ export class AppConfigService {
     if (diaryUrl) {
       // /diary/entries → /entries at diary-api
       configs.push({ prefix: '/diary', upstream: diaryUrl, rewritePrefix: '' });
+    }
+
+    const settingsUrl = this.configService.get('SETTINGS_UPSTREAM_URL');
+    if (settingsUrl) {
+      configs.push({ prefix: '/settings', upstream: settingsUrl, rewritePrefix: '' });
     }
 
     const tasksUrl = this.configService.get('TASKS_UPSTREAM_URL');

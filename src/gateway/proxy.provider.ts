@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import { FastifyInstance, FastifyRequest } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { AppConfigService, UpstreamConfig } from '../config';
 import { CORRELATION_ID_HEADER, HOP_BY_HOP_HEADERS } from '../common/constants';
 import { request as undiciRequest, Dispatcher } from 'undici';
@@ -8,7 +8,7 @@ import { JwtVerifierService } from './jwt-verifier.service';
 import { getAccessToken } from './cookie.util';
 
 // Prefixes whose requests must carry a valid access_token cookie
-const JWT_PROTECTED_PREFIXES = ['/diary'];
+const JWT_PROTECTED_PREFIXES = ['/diary', '/settings', '/tasks'];
 
 @Injectable()
 export class ProxyProvider implements OnModuleInit {
@@ -41,16 +41,24 @@ export class ProxyProvider implements OnModuleInit {
     this.logger.log(`Registered ${upstreamConfigs.length + 1} proxy route(s)`);
   }
 
+  /** Shared secret forwarded to the upstream that matches this API prefix. */
+  private resolveServiceToken(prefix: string): string {
+    if (prefix === '/diary') return this.configService.diaryServiceToken;
+    if (prefix === '/settings') return this.configService.settingsServiceToken;
+    if (prefix === '/tasks') return this.configService.tasksServiceToken;
+    throw new Error(`No service token configured for JWT-protected prefix: ${prefix}`);
+  }
+
   private async registerProxy(fastify: FastifyInstance, config: UpstreamConfig): Promise<void> {
     const { prefix, upstream, rewritePrefix } = config;
     const timeout = this.configService.upstreamTimeoutMs;
     const requiresAuth = JWT_PROTECTED_PREFIXES.some((p) => prefix.startsWith(p));
 
     this.logger.log(
-      `API proxy: ${prefix}/* -> ${upstream}${rewritePrefix ?? ''}/* ${requiresAuth ? '[cookie JWT]' : ''}`,
+      `API proxy: ${prefix} + ${prefix}/* -> ${upstream} ${requiresAuth ? '[cookie JWT]' : ''}`,
     );
 
-    fastify.all(`${prefix}/*`, async (request: FastifyRequest, reply) => {
+    const proxyHandler = async (request: FastifyRequest, reply: FastifyReply) => {
       const effective = rewritePrefix !== undefined ? rewritePrefix : prefix;
       const path = effective + request.url.slice(prefix.length);
       const upstreamUrl = new URL(path, upstream);
@@ -84,7 +92,7 @@ export class ProxyProvider implements OnModuleInit {
         }
 
         headers['x-user-id'] = userId;
-        headers['x-service-token'] = this.configService.diaryServiceToken;
+        headers['x-service-token'] = this.resolveServiceToken(prefix);
       }
 
       let body: string | Buffer | undefined;
@@ -117,6 +125,11 @@ export class ProxyProvider implements OnModuleInit {
           error: { code: 'UPSTREAM_ERROR', message: 'Upstream service unavailable', correlationId: request.correlationId ?? 'unknown' },
         });
       }
-    });
+    };
+
+    // `POST /tasks` (create task) has no extra path segment — only `/tasks/*` would miss it (404).
+    // E2E mock-gateway uses `url.startsWith("/tasks")`; match that behavior here.
+    await fastify.all(prefix, proxyHandler);
+    await fastify.all(`${prefix}/*`, proxyHandler);
   }
 }
